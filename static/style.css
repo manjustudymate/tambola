@@ -1,0 +1,5 @@
+body { font-family: Arial; text-align:center; }
+table { margin:auto; border-collapse:collapse; }
+td { border:1px solid #000; width:35px; height:35px; }
+.hit { background:lightgreen; font-weight:bold; }
+button { padding:10px; margin:5px; }

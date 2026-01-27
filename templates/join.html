@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .join-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px 32px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+
+        .join-title {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 32px;
+            line-height: 1.2;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        #name {
+            width: 100%;
+            padding: 16px 20px;
+            font-size: 18px;
+            border: 2px solid #e1e5e9;
+            border-radius: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+
+        #name:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+
+        #name::placeholder {
+            color: #9ca3af;
+        }
+
+        .join-btn {
+            position: absolute;
+            right: 4px;
+            top: 4px;
+            bottom: 4px;
+            width: 120px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .join-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.5);
+        }
+
+        .join-btn:active {
+            transform: translateY(0);
+        }
+
+        .arrow-icon {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            stroke-width: 2;
+            transition: transform 0.2s ease;
+        }
+
+        .join-btn:hover .arrow-icon {
+            transform: translateX(4px);
+        }
+
+        .error-msg {
+            color: #ef4444;
+            font-size: 14px;
+            margin-top: 8px;
+            display: none;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 15px;
+                background-attachment: fixed;
+            }
+
+            .join-container {
+                padding: 32px 24px;
+                border-radius: 20px;
+                margin: 20px 0;
+            }
+
+            .join-title {
+                font-size: 24px;
+                margin-bottom: 28px;
+            }
+
+            #name {
+                padding: 18px 24px;
+                font-size: 17px;
+            }
+
+            .join-btn {
+                width: 100px;
+                right: 2px;
+                top: 2px;
+                bottom: 2px;
+            }
+        }
+
+        #name:focus-visible,
+        .join-btn:focus-visible {
+            outline: 3px solid #667eea;
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="join-container">
+        <h2 class="join-title">Enter your name</h2>
+        <div class="input-group">
+            <input
+                id="name"
+                type="text"
+                placeholder="Enter your player name"
+                autocomplete="off"
+                maxlength="20"
+            >
+            <button class="join-btn" onclick="join()">
+                <span>Join Game</span>
+                <svg class="arrow-icon" viewBox="0 0 24 24" fill="none">
+                    <polyline points="9,18 15,12 9,6"></polyline>
+                </svg>
+            </button>
+        </div>
+        <div id="error-msg" class="error-msg">Please enter a valid name</div>
+    </div>
+
+    <script>
+        function join() {
+            const name = document.getElementById("name").value.trim();
+            const errorMsg = document.getElementById("error-msg");
+
+            if (!name) {
+                errorMsg.style.display = "block";
+                document.getElementById("name").focus();
+                return;
+            }
+
+            errorMsg.style.display = "none";
+            location.href = "/player/{{game_id}}?name=" + encodeURIComponent(name);
+        }
+
+        // Allow Enter key to join
+        document.getElementById("name").addEventListener("keypress", function(e) {
+            if (e.key === "Enter") {
+                join();
+            }
+        });
+
+        // Hide error on input
+        document.getElementById("name").addEventListener("input", function() {
+            document.getElementById("error-msg").style.display = "none";
+        });
+    </script>
+</body>
+</html>
