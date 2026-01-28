@@ -195,6 +195,21 @@
             transform: translateY(-1px);
         }
 
+        /* Wrong tap feedback */
+        td.wrong {
+          background: #fee2e2 !important;
+          box-shadow: 0 0 12px rgba(239, 68, 68, 0.8);
+          animation: shake 0.3s;
+        }
+
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          20% { transform: translateX(-4px); }
+          40% { transform: translateX(4px); }
+          60% { transform: translateX(-3px); }
+          80% { transform: translateX(3px); }
+        }
+
         .results-section {
     background: rgba(15, 23, 42, 0.8);
     border-radius: 12px;
@@ -342,6 +357,23 @@
     </style>
 </head>
 <body>
+    <div id="winner-popup" style="
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      padding: 25px 40px;
+      border-radius: 20px;
+      font-size: 22px;
+      font-weight: bold;
+      display: none;
+      z-index: 9999;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    ">
+    </div>
+
     <div class="container">
         <h2 class="title">🎟️ Your Ticket</h2>
 
@@ -385,9 +417,10 @@
     </div>
 
     <!-- Audio files -->
-    <audio id="beep" src="/static/sounds/beep.mp3" preload="auto"></audio>
-    <audio id="win" src="/static/sounds/win.mp3" preload="auto"></audio>
+    <audio id="announce" src="/static/sounds/announce.wav" preload="auto"></audio>
+    <audio id="tick" src="/static/sounds/tick.wav" preload="auto"></audio>
     <audio id="error" src="/static/sounds/error.mp3" preload="auto"></audio>
+    <audio id="win" src="/static/sounds/win.wav" preload="auto"></audio>
 
     <!-- Socket.IO -->
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
@@ -397,34 +430,41 @@
         const name = params.get("name");
         const game = "{{game_id}}";
         let pid = null;
-
+        let announced = new Set();
+        let marked = new Set();
         socket.emit("join_game", {game, name});
 
         socket.on("ticket", d => {
             pid = d.pid;
             let html = "<table>";
             d.ticket.forEach(r => {
-                html += "<tr>" + r.map(n => `<td>${n || ""}</td>`).join("") + "</tr>";
+                html += "<tr>" + r.map(n => {
+                    if (!n) return `<td></td>`;
+                    return `<td onclick="mark(this)">${n}</td>`;
+                }).join("") + "</tr>";
             });
             html += "</table>";
             document.getElementById("ticket").innerHTML = html;
         });
 
-        socket.on("number", n => {
+       socket.on("number", n => {
             document.getElementById("num").innerText = n;
-            document.getElementById("beep").play().catch(e => console.log("Audio play failed:", e));
-            document.querySelectorAll("td").forEach(td => {
-                if (td.innerText == n) {
-                    td.classList.add("hit");
-                    td.style.animation = "none";
-                    setTimeout(() => td.style.animation = "", 10);
-                }
-            });
+            document.getElementById("announce").play().catch(e => {});
+            announced.add(n);   // only store announced, don't auto-mark
         });
 
         socket.on("history", h => {
     document.getElementById("win").play().catch(e => {});
     const list = document.getElementById("winners-list");
+
+     // Show popup for latest winner
+    const types = ['jaldi5', 'row1', 'row2', 'row3', 'full'];
+    types.forEach(type => {
+        if (h[type] && h[type].length > 0) {
+            const latest = h[type][h[type].length - 1];
+            showWinner(`🏆 ${latest} won ${type.toUpperCase()}`);
+        }
+    });
 
     if (!h || Object.values(h).every(arr => arr.length === 0)) {
         list.innerHTML = '<div class="no-winners">No winners yet...</div>';
@@ -454,11 +494,50 @@
         });
 
         function claim(t) {
-            if (!pid) {
-                console.log("No ticket assigned yet");
+            if (!pid) return;
+
+            socket.emit("claim", {
+                game,
+                pid,
+                type: t,
+                marked: Array.from(marked)
+            });
+        }
+
+        function mark(cell) {
+            const value = parseInt(cell.innerText);
+            if (!value) return;
+
+            // ❌ If number not announced → show UI feedback instead of alert
+            if (!announced.has(value)) {
+                document.getElementById("error").play().catch(e => {});
+
+                cell.classList.add("wrong");
+                setTimeout(() => cell.classList.remove("wrong"), 500);
+
                 return;
             }
-            socket.emit("claim", {game, pid, type: t});
+
+            // ✅ Toggle marking
+            if (marked.has(value)) {
+                marked.delete(value);
+                cell.classList.remove("hit");
+            } else {
+                marked.add(value);
+                cell.classList.add("hit");
+                document.getElementById("tick").play().catch(e => {});
+            }
+        }
+
+        //Show winner
+        function showWinner(text) {
+            const popup = document.getElementById("winner-popup");
+            popup.innerText = text;
+            popup.style.display = "block";
+
+            setTimeout(() => {
+                popup.style.display = "none";
+            }, 1500);
         }
 
         // Add haptic feedback for mobile

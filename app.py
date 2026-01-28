@@ -87,7 +87,8 @@ def host():
     ip = get_local_ip()
 
     # 👇 Build invite link using that IP
-    invite_link = f"http://{ip}:5000/join/{game_id}"
+    base = request.host_url.rstrip("/")
+    invite_link = f"{base}/join/{game_id}"
 
     # 👇 Pass invite_link to template
     return render_template(
@@ -147,40 +148,81 @@ def pick(data):
 def claim(data):
     g = games[data["game"]]
     p = g["players"][data["pid"]]
+
     name = p["name"]
     ticket = p["ticket"]
-    picked = set(g["picked"])
 
+    # Track what this player has already claimed
+    claimed = p.setdefault("claimed", [])
+
+    # These are the numbers player actually clicked
+    marked = set(data.get("marked", []))
+
+    # Flatten ticket
     flat = [n for r in ticket for n in r if n]
-    matched = len(set(flat) & picked)
-    rows = [all(n in picked for n in r if n) for r in ticket]
 
+    # Validation rules
     valid = False
-    if data["type"]=="jaldi5" and matched>=5: valid=True
-    if data["type"]=="row1" and rows[0]: valid=True
-    if data["type"]=="row2" and rows[1]: valid=True
-    if data["type"] == "row3" and rows[2]: valid = True
-    if data["type"]=="full" and all(rows): valid=True
+    ctype = data["type"]
 
-    if valid and name not in g["history"][data["type"]]:
-        g["history"][data["type"]].append(name)
+    if ctype == "jaldi5" and len(marked) >= 5:
+        valid = True
+
+    elif ctype == "row1":
+        valid = all(n in marked for n in ticket[0] if n)
+
+    elif ctype == "row2":
+        valid = all(n in marked for n in ticket[1] if n)
+
+    elif ctype == "row3":
+        valid = all(n in marked for n in ticket[2] if n)
+
+    elif ctype == "full":
+        valid = all(n in marked for n in flat)
+
+    # Already claimed by this player
+    if ctype in claimed:
+        emit("invalid", room=request.sid)
+        return
+
+    if valid:
+        claimed.append(ctype)
+
+        if name not in g["history"][ctype]:
+            g["history"][ctype].append(name)
+
         emit("history", g["history"], room=data["game"])
     else:
         emit("invalid", room=request.sid)
 
+
 @app.route("/results/<game_id>")
 def results(game_id):
     h = games[game_id]["history"]
+
+    title_map = {
+        "jaldi5": "Jaldi 5",
+        "row1": "First Line",
+        "row2": "Second Line",
+        "row3": "Third Line",
+        "full": "Full House"
+    }
+
     text = "🎯 Tambola Game Results\n\n"
-    for k,v in h.items():
-        title = {"jaldi5":"Jaldi 5","row1":"First Line","row2":"Second Line","full":"Full House"}[k]
+
+    for k, v in h.items():
+        title = title_map[k]
         text += f"{title} Winners:\n"
-        if not v: text += "None\n\n"
+
+        if not v:
+            text += "None\n\n"
         else:
-            for i,n in enumerate(v,1):
+            for i, n in enumerate(v, 1):
                 text += f"{i}. {n}\n"
             text += "\n"
+
     return text
+
 
 @socketio.on("host_join")
 def host_join(data):
