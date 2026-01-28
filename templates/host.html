@@ -370,7 +370,10 @@
       </p>
 <!--      <input value="http://localhost:5000/join/{{game_id}}" readonly>-->
 <!--      <input value="{{ invite_link }}" readonly>-->
-      <input value="https://tambola-2o6h.onrender.com/join/{{game_id}}" readonly>
+    <input id="gameLink" value="https://tambola-2o6h.onrender.com/join/{{game_id}}" readonly>
+    <button onclick="copyLink()">Copy Link</button>
+
+    <p id="msg" style="color: green;"></p>
 
     </div>
 
@@ -470,6 +473,15 @@ function share() {
       window.open(url, '_blank');
     });
 }
+  function copyLink() {
+    const input = document.getElementById("gameLink");
+    input.select();
+    input.setSelectionRange(0, 99999); // for mobile
+
+    navigator.clipboard.writeText(input.value);
+
+    document.getElementById("msg").innerText = "Link copied!";
+  }
 
 // Players list with count
 socket.on("players", list => {
