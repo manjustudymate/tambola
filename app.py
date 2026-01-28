@@ -79,7 +79,7 @@ def host():
     games[game_id] = {
         "players": {},
         "picked": [],
-        "available": list(range(1,101)),
+        "available": list(range(1,91)),
         "history": {"jaldi5":[], "row1":[], "row2":[],"row3":[], "full":[]}
     }
 
@@ -87,8 +87,7 @@ def host():
     ip = get_local_ip()
 
     # 👇 Build invite link using that IP
-    base = request.host_url.rstrip("/")
-    invite_link = f"{base}/join/{game_id}"
+    invite_link = f"http://{ip}:5000/join/{game_id}"
 
     # 👇 Pass invite_link to template
     return render_template(
